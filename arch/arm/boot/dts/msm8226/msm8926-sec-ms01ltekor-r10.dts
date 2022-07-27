@@ -13,14 +13,14 @@
 
 /dts-v1/;
 /include/ "msm8926.dtsi"
-/include/ "msm8926-sec-ms01ltekor-r00.dtsi"
+/include/ "msm8926-sec-ms01ltekor-r10.dtsi"
 /include/ "msm8926-sec-ms01-tdmb-r00.dtsi"
 
 / {
-	model = "[SM-G7105 MS01-LTE-EUR]Rev-03 8926 MTP";
+	model = "[SM-G710SKL MS01-LTE-KOR]Rev-10 8926 MTP";
 	compatible = "qcom,msm8226-mtp", "qcom,msm8226", "qcom,mtp";
-	qcom,msm-id = <0xC8085201 3 0x10000>;
-}; 
+	qcom,msm-id = <0xC8085201 10 0x10000>;
+};
 
 &soc {
 	 i2c@f9925000 { /* BLSP-1 QUP-3 */

@@ -469,6 +469,13 @@ else ifeq ($(CONFIG_MACH_MS01_EUR_3G),y)
                 dtb-$(CONFIG_ARCH_MSM8226)      += msm8226-sec-ms013geur-r03.dtb
                 dtb-$(CONFIG_ARCH_MSM8226)      += msm8226-sec-ms013geur-r04.dtb
                 dtb-$(CONFIG_ARCH_MSM8226)      += msm8226-sec-ms013geur-r05.dtb
+else ifeq ($(CONFIG_MACH_MS01_KOR_LTE),y)
+	dtb-$(CONFIG_ARCH_MSM8226)	+= msm8926-sec-ms01ltekor-r00.dtb
+	dtb-$(CONFIG_ARCH_MSM8226)	+= msm8926-sec-ms01ltekor-r06.dtb
+	dtb-$(CONFIG_ARCH_MSM8226)	+= msm8926-sec-ms01ltekor-r07.dtb
+	dtb-$(CONFIG_ARCH_MSM8226)	+= msm8926-sec-ms01ltekor-r08.dtb
+	dtb-$(CONFIG_ARCH_MSM8226)	+= msm8926-sec-ms01ltekor-r09.dtb
+	dtb-$(CONFIG_ARCH_MSM8226)	+= msm8926-sec-ms01ltekor-r10.dtb
 else ifeq ($(CONFIG_MACH_VICTORLTE_CMCC),y)
 	 dtb-$(CONFIG_ARCH_MSM8226)	+= msm8926-sec-victorltecmcc-r00.dtb
 else ifeq ($(CONFIG_MACH_VICTORLTE_CTC),y)
