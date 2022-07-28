@@ -1661,6 +1661,10 @@ qpnp_chg_usb_usbin_valid_irq_handler(int irq, void *_chip)
 		chip->cable_type = msm8930_get_cable_status();
 		if (chip->cable_type == CABLE_TYPE_DESK_DOCK)
 			chip->cable_type = CABLE_TYPE_MISC;
+		#if defined(CONFIG_MACH_MS01_KOR_LTE)
+		else if (chip->cable_type == CABLE_TYPE_JIG_UART_OFF_VB)
+			chip->cable_type = CABLE_TYPE_UARTOFF;
+		#endif
 	} else if ((usb_ov_sts & 0xC0) == 0x40) {
 		pr_err("USB-IN triggered : usbin OVER VOLTAGE \n");
 		#ifndef CONFIG_NOT_USE_EXT_OVP
@@ -5249,6 +5253,20 @@ sec_bat_read_dt_props(struct qpnp_chg_chip *chip)
         pr_err("imax-usb %d \n",chip->batt_pdata->imax_usb);
 #endif
 
+#if defined(CONFIG_MACH_MS01_KOR_LTE)
+	chip->batt_pdata->temp_high_block_event = 700;
+	chip->batt_pdata->temp_high_recover_event = 410;
+	chip->batt_pdata->temp_low_block_event = -50;
+	chip->batt_pdata->temp_low_recover_event = 0;
+	chip->batt_pdata->temp_high_block_normal = 600;
+	chip->batt_pdata->temp_high_recover_normal = 410;
+	chip->batt_pdata->temp_low_block_normal = -50;
+	chip->batt_pdata->temp_low_recover_normal = 0;
+	chip->batt_pdata->temp_high_block_lpm = 600;
+	chip->batt_pdata->temp_high_recover_lpm = 410;
+	chip->batt_pdata->temp_low_block_lpm = -50;
+	chip->batt_pdata->temp_low_recover_lpm = 0;
+#else
         SEC_BAT_OF_PROP_READ(chip, temp_high_block_event, "temp-high-block-event", rc, 0);
         SEC_BAT_OF_PROP_READ(chip, temp_high_recover_event, "temp-high-recover-event", rc, 0);
         SEC_BAT_OF_PROP_READ(chip, temp_low_block_event, "temp-low-block-event", rc, 0);
@@ -5263,6 +5281,7 @@ sec_bat_read_dt_props(struct qpnp_chg_chip *chip)
         SEC_BAT_OF_PROP_READ(chip, temp_low_recover_lpm, "temp-low-recover-lpm", rc, 0);
         if (rc)
                 pr_err("failed to read SEC BTM dt parameters %d\n", rc);
+#endif
 
 #ifdef SEC_CHARGER_DEBUG
         pr_err("EVENT temp-high-block %d\n",chip->batt_pdata->temp_high_block_event);
@@ -6318,8 +6337,10 @@ static void sec_bat_monitor(struct work_struct *work)
 #ifdef SEC_BTM_TEST
 	static u8 btm_count;
 #endif
+	#if !defined(CONFIG_MACH_MS01_KOR_LTE)
 	int rc;
 	u8 buck_sts = 0;
+	#endif
 
 	if (chip->is_in_sleep)
 		chip->is_in_sleep = false;
@@ -6419,6 +6440,7 @@ static void sec_bat_monitor(struct work_struct *work)
 
 	if (chip->batt_status == POWER_SUPPLY_STATUS_CHARGING || chip->is_recharging) {
 		if ( qpnp_chg_is_usb_chg_plugged_in(chip) && !chip->charging_disabled ) {
+			#if !defined(CONFIG_MACH_MS01_KOR_LTE)
 			rc = qpnp_chg_read(chip, &buck_sts, INT_RT_STS(chip->buck_base), 1);
 			if (!rc) {
 				if (buck_sts & VDD_LOOP_IRQ) {
@@ -6427,6 +6449,7 @@ static void sec_bat_monitor(struct work_struct *work)
 			} else {
 				pr_err("failed to read buck rc=%d\n", rc);
 			}
+			#endif
 			if(chip->ui_full_chg) { /* second phase charging */
 				pr_err("second phase charging: ui_full_chg(%d) \n",chip->ui_full_chg);
 

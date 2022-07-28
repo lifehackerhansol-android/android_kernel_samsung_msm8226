@@ -326,6 +326,30 @@ static const struct qpnp_vadc_map_pt adcmap_btm_threshold[] = {
 	{1190,	51},
 	{1200,	50},
 };
+#elif defined(CONFIG_MACH_MS01_KOR_LTE)
+static const struct qpnp_vadc_map_pt adcmap_btm_threshold[] = {
+	{-200,	1678},
+	{-150,	1624},
+	{-100,	1558},
+	{-50,	1483},
+	{0,		1393},
+	{50,	1301},
+	{100,	1198},
+	{150,	1095},
+	{200,	983},
+	{250,	870},
+	{300,	765},
+	{350,	668},
+	{400,	582},
+	{450,	499},
+	{500,	462},
+	{550,	393},
+	{600,	334},
+	{650,	288},
+	{700,	246},
+	{750,	209},
+	{800,	177},
+};
 #elif defined(CONFIG_SEC_VICTOR_PROJECT)
 static const struct qpnp_vadc_map_pt adcmap_btm_threshold[] = {
 	{-300,	1642},
@@ -1379,6 +1403,10 @@ int qpnp_adc_get_revid_version(struct device *dev)
 		return -EINVAL;
 	}
 
+#if defined(CONFIG_MACH_MS01_KOR_LTE)
+	/* skip check pmic version */
+	return -EINVAL;
+#else
 	if ((revid_data->rev1 == PM8941_V3P1_REV1) &&
 		(revid_data->rev2 == PM8941_V3P1_REV2) &&
 		(revid_data->rev3 == PM8941_V3P1_REV3) &&
@@ -1444,6 +1472,7 @@ int qpnp_adc_get_revid_version(struct device *dev)
 			return QPNP_REV_ID_8110_2_0;
 	else
 		return -EINVAL;
+#endif
 }
 EXPORT_SYMBOL(qpnp_adc_get_revid_version);
 

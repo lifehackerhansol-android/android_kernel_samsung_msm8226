@@ -410,8 +410,13 @@ void send_asm_custom_topology(struct audio_client *ac)
 
 	get_asm_custom_topology(&cal_block);
 	if (cal_block.cal_size == 0) {
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("%s: no cal to send addr= 0x%pa\n",
+				__func__, &cal_block.cal_paddr);
+#else
 		pr_debug("%s: no cal to send addr= 0x%pa\n",
 				__func__, &cal_block.cal_paddr);
+#endif
 		return;
 	}
 
@@ -463,9 +468,15 @@ void send_asm_custom_topology(struct audio_client *ac)
 	asm_top.mem_map_handle = topology_map_handle;
 	asm_top.payload_size = cal_block.cal_size;
 
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+	 pr_info("%s: Sending ASM_CMD_ADD_TOPOLOGIES payload = 0x%x, size = %d, map handle = 0x%x\n",
+		__func__, asm_top.payload_addr_lsw,
+		asm_top.payload_size, asm_top.mem_map_handle);
+#else
 	 pr_debug("%s: Sending ASM_CMD_ADD_TOPOLOGIES payload = 0x%x, size = %d, map handle = 0x%x\n",
 		__func__, asm_top.payload_addr_lsw,
 		asm_top.payload_size, asm_top.mem_map_handle);
+#endif
 
 	result = apr_send_pkt(ac->apr, (uint32_t *) &asm_top);
 	if (result < 0) {
@@ -1295,9 +1306,15 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 	payload = data->payload;
 	if ((atomic_read(&ac->nowait_cmd_cnt) > 0) &&
 		is_no_wait_cmd_rsp(data->opcode, payload)) {
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("%s: nowait_cmd_cnt %d\n",
+				__func__,
+				atomic_read(&ac->nowait_cmd_cnt));
+#else
 		pr_debug("%s: nowait_cmd_cnt %d\n",
 				__func__,
 				atomic_read(&ac->nowait_cmd_cnt));
+#endif
 		atomic_dec(&ac->nowait_cmd_cnt);
 		wakeup_flag = 0;
 	}
@@ -1306,8 +1323,13 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		atomic_set(&ac->reset, 1);
 		if (ac->apr == NULL)
 			ac->apr = ac->apr2;
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("q6asm_callback: Reset event is received: %d %d apr[%p]\n",
+				data->reset_event, data->reset_proc, ac->apr);
+#else
 		pr_debug("q6asm_callback: Reset event is received: %d %d apr[%p]\n",
 				data->reset_event, data->reset_proc, ac->apr);
+#endif
 		if (ac->cb)
 			ac->cb(data->opcode, data->token,
 				(uint32_t *)data->payload, ac->priv);
@@ -1320,16 +1342,29 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		return 0;
 	}
 
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+	pr_info("%s: session[%d]opcode[0x%x] token[0x%x]payload_s[%d] src[%d] dest[%d]\n",
+		 __func__,
+		ac->session, data->opcode,
+		data->token, data->payload_size, data->src_port,
+		data->dest_port);
+#else
 	pr_debug("%s: session[%d]opcode[0x%x] token[0x%x]payload_s[%d] src[%d] dest[%d]\n",
 		 __func__,
 		ac->session, data->opcode,
 		data->token, data->payload_size, data->src_port,
 		data->dest_port);
+#endif
 	if ((data->opcode != ASM_DATA_EVENT_RENDERED_EOS) &&
 	    (data->opcode != ASM_DATA_EVENT_EOS) &&
 	    (data->opcode != ASM_SESSION_EVENT_RX_UNDERFLOW))
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("%s:Payload = [0x%x] status[0x%x]\n",
+			__func__, payload[0], payload[1]);
+#else
 		pr_debug("%s:Payload = [0x%x] status[0x%x]\n",
 			__func__, payload[0], payload[1]);
+#endif
 	if (data->opcode == APR_BASIC_RSP_RESULT) {
 		token = data->token;
 		if (payload[1] != 0) {
@@ -1349,7 +1384,11 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		case ASM_SESSION_CMD_RUN_V2:
 		case ASM_SESSION_CMD_REGISTER_FORX_OVERFLOW_EVENTS:
 		case ASM_STREAM_CMD_FLUSH_READBUFS:
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("%s:Payload = [0x%x]\n", __func__, payload[0]);
+#else
 		pr_debug("%s:Payload = [0x%x]\n", __func__, payload[0]);
+#endif
 		ret = q6asm_is_valid_session(data, priv);
 		if (ret != 0)
 			return ret;
@@ -1363,8 +1402,13 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		case ASM_DATA_CMD_REMOVE_INITIAL_SILENCE:
 		case ASM_DATA_CMD_REMOVE_TRAILING_SILENCE:
 		case ASM_SESSION_CMD_REGISTER_FOR_RX_UNDERFLOW_EVENTS:
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("%s:Payload = [0x%x]stat[0x%x]\n",
+				__func__, payload[0], payload[1]);
+#else
 		pr_debug("%s:Payload = [0x%x]stat[0x%x]\n",
 				__func__, payload[0], payload[1]);
+#endif
 			if (atomic_read(&ac->cmd_state) && wakeup_flag) {
 				atomic_set(&ac->cmd_state, 0);
 				wake_up(&ac->cmd_wait);
@@ -1385,8 +1429,13 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 					(uint32_t *)data->payload, ac->priv);
 			break;
 		case ASM_STREAM_CMD_GET_PP_PARAMS_V2:
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+			pr_info("%s: ASM_STREAM_CMD_GET_PP_PARAMS_V2\n",
+				__func__);
+#else
 			pr_debug("%s: ASM_STREAM_CMD_GET_PP_PARAMS_V2\n",
 				__func__);
+#endif
 			/* Should only come here if there is an APR */
 			/* error or malformed APR packet. Otherwise */
 			/* response will be returned as */
@@ -1399,8 +1448,13 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 			}
 			break;
 		default:
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+			pr_info("%s:command[0x%x] not expecting rsp\n",
+							__func__, payload[0]);
+#else
 			pr_debug("%s:command[0x%x] not expecting rsp\n",
 							__func__, payload[0]);
+#endif
 			break;
 		}
 		return 0;
@@ -1409,9 +1463,15 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 	switch (data->opcode) {
 	case ASM_DATA_EVENT_WRITE_DONE_V2:{
 		struct audio_port_data *port = &ac->port[IN];
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("%s: Rxed opcode[0x%x] status[0x%x] token[%d]",
+						__func__, payload[0], payload[1],
+						data->token);
+#else
 		pr_debug("%s: Rxed opcode[0x%x] status[0x%x] token[%d]",
 				__func__, payload[0], payload[1],
 				data->token);
+#endif
 		if (ac->io_mode & SYNC_IO_MODE) {
 			if (port->buf == NULL) {
 				pr_err("%s: Unexpected Write Done\n",
@@ -1441,7 +1501,11 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		break;
 	}
 	case ASM_STREAM_CMDRSP_GET_PP_PARAMS_V2:
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("%s: ASM_STREAM_CMDRSP_GET_PP_PARAMS_V2\n", __func__);
+#else
 		pr_debug("%s: ASM_STREAM_CMDRSP_GET_PP_PARAMS_V2\n", __func__);
+#endif
 			if (payload[0] != 0)
 				pr_err("%s: ASM_STREAM_CMDRSP_GET_PP_PARAMS_V2 returned error = 0x%x\n",
 					__func__, payload[0]);
@@ -1454,6 +1518,21 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 
 		config_debug_fs_read_cb();
 
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("%s:R-D: status=%d buff_add=%x act_size=%d offset=%d\n",
+				__func__, payload[READDONE_IDX_STATUS],
+				payload[READDONE_IDX_BUFADD_LSW],
+				payload[READDONE_IDX_SIZE],
+				payload[READDONE_IDX_OFFSET]);
+
+		pr_info("%s:R-D:msw_ts=%d lsw_ts=%d memmap_hdl=%x flags=%d id=%d num=%d\n",
+				__func__, payload[READDONE_IDX_MSW_TS],
+				payload[READDONE_IDX_LSW_TS],
+				payload[READDONE_IDX_MEMMAP_HDL],
+				payload[READDONE_IDX_FLAGS],
+				payload[READDONE_IDX_SEQ_ID],
+				payload[READDONE_IDX_NUMFRAMES]);
+#else
 		pr_debug("%s:R-D: status=%d buff_add=%x act_size=%d offset=%d\n",
 				__func__, payload[READDONE_IDX_STATUS],
 				payload[READDONE_IDX_BUFADD_LSW],
@@ -1467,7 +1546,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 				payload[READDONE_IDX_FLAGS],
 				payload[READDONE_IDX_SEQ_ID],
 				payload[READDONE_IDX_NUMFRAMES]);
-
+#endif
 		if (ac->io_mode & SYNC_IO_MODE) {
 			if (port->buf == NULL) {
 				pr_err("%s: Unexpected Write Done\n", __func__);
@@ -1493,19 +1572,38 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 	}
 	case ASM_DATA_EVENT_EOS:
 	case ASM_DATA_EVENT_RENDERED_EOS:
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("%s:EOS ACK received: rxed opcode[0x%x]\n",
+				  __func__, data->opcode);
+#else
 		pr_debug("%s:EOS ACK received: rxed opcode[0x%x]\n",
 				  __func__, data->opcode);
+#endif
 		break;
 	case ASM_SESSION_EVENTX_OVERFLOW:
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("ASM_SESSION_EVENTX_OVERFLOW\n");
+#else
 		pr_debug("ASM_SESSION_EVENTX_OVERFLOW\n");
+#endif
 		break;
 	case ASM_SESSION_EVENT_RX_UNDERFLOW:
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("ASM_SESSION_EVENT_RX_UNDERFLOW\n");
+#else
 		pr_debug("ASM_SESSION_EVENT_RX_UNDERFLOW\n");
+#endif
 		break;
 	case ASM_SESSION_CMDRSP_GET_SESSIONTIME_V3:
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("%s: ASM_SESSION_CMDRSP_GET_SESSIONTIME_V3, payload[0] = %d, payload[1] = %d, payload[2] = %d\n",
+				 __func__,
+				 payload[0], payload[1], payload[2]);
+#else
 		pr_debug("%s: ASM_SESSION_CMDRSP_GET_SESSIONTIME_V3, payload[0] = %d, payload[1] = %d, payload[2] = %d\n",
 				 __func__,
 				 payload[0], payload[1], payload[2]);
+#endif
 		ac->time_stamp = (uint64_t)(((uint64_t)payload[2] << 32) |
 				payload[1]);
 		if (atomic_cmpxchg(&ac->time_flag, 1, 0))
@@ -1513,10 +1611,17 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		break;
 	case ASM_DATA_EVENT_SR_CM_CHANGE_NOTIFY:
 	case ASM_DATA_EVENT_ENC_SR_CM_CHANGE_NOTIFY:
+#ifdef CONFIG_MACH_MS01_KOR_LTE
+		pr_info("%s: ASM_DATA_EVENT_SR_CM_CHANGE_NOTIFY, payload[0] = %d, payload[1] = %d, payload[2] = %d, payload[3] = %d\n",
+				 __func__,
+				payload[0], payload[1], payload[2],
+				payload[3]);
+#else
 		pr_debug("%s: ASM_DATA_EVENT_SR_CM_CHANGE_NOTIFY, payload[0] = %d, payload[1] = %d, payload[2] = %d, payload[3] = %d\n",
 				 __func__,
 				payload[0], payload[1], payload[2],
 				payload[3]);
+#endif
 		break;
 	}
 	if (ac->cb)

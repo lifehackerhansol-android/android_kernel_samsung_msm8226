@@ -105,7 +105,10 @@ struct bma255_p {
 	int sda_gpio;
 	int scl_gpio;
 	int time_count;
-	u64 timestamp;
+#if defined(CONFIG_MACH_MS01_EUR_LTE) || defined(CONFIG_MACH_MS01_KOR_LTE)
+	struct regulator *l19;
+	struct regulator *lvs1_1p8;
+#endif
 };
 
 static int bma255_open_calibration(struct bma255_p *);
@@ -278,19 +281,32 @@ static int bma255_set_mode(struct bma255_p *data, unsigned char mode)
 {
 	int ret = 0;
 	unsigned char buf1, buf2;
+#if defined(CONFIG_MACH_MS01_EUR_LTE) || defined(CONFIG_MACH_MS01_KOR_LTE)
+	unsigned buf3;
+#endif
 
 	mutex_lock(&data->mode_mutex);
 
 	ret = bma255_i2c_read(data, BMA255_MODE_CTRL_REG, &buf1, 1);
 	ret += bma255_i2c_read(data, BMA255_LOW_NOISE_CTRL_REG, &buf2, 1);
+#if defined(CONFIG_MACH_MS01_EUR_LTE) || defined(CONFIG_MACH_MS01_KOR_LTE)
+	ret += bma255_i2c_read(data, BMA255_BW_SEL_REG, &buf3, 1);
+#endif
 
 	switch (mode) {
 	case BMA255_MODE_NORMAL:
 		buf1  = BMA255_SET_BITSLICE(buf1, BMA255_MODE_CTRL, 0);
 		buf2  = BMA255_SET_BITSLICE(buf2, BMA255_LOW_POWER_MODE, 0);
+#if defined(CONFIG_MACH_MS01_EUR_LTE) || defined(CONFIG_MACH_MS01_KOR_LTE)
+		buf3  = BMA255_SET_BITSLICE(buf3, BMA255_BANDWIDTH, 3);
+#endif
 		ret += bma255_i2c_write(data, BMA255_MODE_CTRL_REG, buf1);
 		mdelay(1);
 		ret += bma255_i2c_write(data, BMA255_LOW_NOISE_CTRL_REG, buf2);
+#if defined(CONFIG_MACH_MS01_EUR_LTE) || defined(CONFIG_MACH_MS01_KOR_LTE)
+		mdelay(1);
+		ret += bma255_i2c_write(data, BMA255_BW_SEL_REG, &buf3);
+#endif
 		break;
 	case BMA255_MODE_LOWPOWER1:
 		buf1  = BMA255_SET_BITSLICE(buf1, BMA255_MODE_CTRL, 2);
@@ -1072,6 +1088,63 @@ static int bma255_parse_dt(struct bma255_p *data, struct device *dev)
 	return 0;
 }
 
+#if defined(CONFIG_MACH_MS01_EUR_LTE) || defined(CONFIG_MACH_MS01_KOR_LTE)
+int bma255_power_on(struct bma255_p *data, bool onoff)
+{
+	int ret = -1;
+	if (!data->l19) {
+		data->l19 = regulator_get(&data->client->dev, "8226_l19");
+		if (!data->l19) {
+			pr_err("%s: regulator pointer null l19, rc=%d\n",
+				__func__, ret);
+			return ret;
+		}
+		ret = regulator_set_voltage(data->l19, 2850000, 2850000);
+		if (ret) {
+			pr_err("%s: set voltage failed on l19, rc=%d\n",
+				__func__, ret);
+			return ret;
+		}
+	}
+	if (!data->lvs1_1p8) {
+		data->lvs1_1p8 = regulator_get(&data->client->dev, "8226_lvs1");
+		if(!data->lvs1_1p8){
+			pr_err("%s: regulator_get for 8226_lvs1 failed\n", __func__);
+			return 0;
+		}
+	}
+	if(onoff){
+		ret = regulator_enable(data->l19);
+		if (ret) {
+			pr_err("%s: Failed to enable regulator l19.\n",
+				__func__);
+			return ret;
+		}
+		ret = regulator_enable(data->lvs1_1p8);
+		if (ret) {
+			pr_err("%s: Failed to enable regulator lvs1_1p8.\n",
+				__func__);
+			return ret;
+		}
+	}
+	else {
+		ret = regulator_disable(data->l19);
+		if (ret) {
+			pr_err("%s: Failed to disable regulatorl19.\n",
+				__func__);
+			return ret;
+		}
+		ret = regulator_disable(data->lvs1_1p8);
+		if (ret) {
+			pr_err("%s: Failed to disable regulator lvs1_1p8.\n",
+				__func__);
+			return ret;
+		}
+	}
+	return 0;
+}
+#endif
+
 #ifndef CONFIG_MACH_MS01_EUR_3G
 static int sensor_regulator_onoff(struct device *dev, bool onoff)
 {
@@ -1139,6 +1212,9 @@ static int bma255_probe(struct i2c_client *client,
 		goto exit_of_node;
 	}
 
+#if defined(CONFIG_MACH_MS01_EUR_LTE) || defined(CONFIG_MACH_MS01_KOR_LTE)
+	bma255_power_on(data, 1);
+#endif
 	ret = bma255_setup_pin(data);
 	if (ret < 0) {
 		pr_err("[SENSOR]: %s - could not setup pin\n", __func__);
@@ -1293,7 +1369,9 @@ static int bma255_suspend(struct device *dev)
 
 		bma255_set_enable(data, OFF);
 	}
-
+#if defined(CONFIG_MACH_MS01_EUR_LTE) || defined(CONFIG_MACH_MS01_KOR_LTE)
+	bma255_power_on(data, 0);
+#endif
 	return 0;
 }
 
@@ -1302,7 +1380,9 @@ static int bma255_resume(struct device *dev)
 	struct bma255_p *data = dev_get_drvdata(dev);
 
 	pr_info("[SENSOR]: %s\n", __func__);
-
+#if defined(CONFIG_MACH_MS01_EUR_LTE) || defined(CONFIG_MACH_MS01_KOR_LTE)
+	bma255_power_on(data, 1);
+#endif
 	if (atomic_read(&data->enable) == ON) {
 		bma255_set_mode(data, BMA255_MODE_NORMAL);
 		bma255_set_enable(data, ON);
